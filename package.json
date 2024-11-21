@@ -15,10 +15,10 @@
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/I2E-Consulting/capacitor-media-session.git"
+    "url": "git+https://github.com/jofr/capacitor-media-session.git"
   },
   "bugs": {
-    "url": "https://github.com/I2E-Consulting/capacitor-media-session/issues"
+    "url": "https://github.com/jofr/capacitor-media-session/issues"
   },
   "keywords": [
     "capacitor",
