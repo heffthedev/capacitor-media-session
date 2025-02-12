@@ -158,6 +158,11 @@ public class MediaSessionPlugin extends Plugin {
         playbackState = call.getString("playbackState", playbackState);
 
         final boolean playback = playbackState.equals("playing") || playbackState.equals("paused");
+        if(playbackState.equals("none"))
+        {
+            service.removeNotification();
+            return;
+        }
         if (startServiceOnlyDuringPlayback && service == null && playback) {
             startMediaService();
         } else if (startServiceOnlyDuringPlayback && service != null && !playback) {

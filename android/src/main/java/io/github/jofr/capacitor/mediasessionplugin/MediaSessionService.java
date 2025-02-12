@@ -300,4 +300,11 @@ public class MediaSessionService extends Service {
         this.possibleActionsUpdate = true;
         this.update();
     }
+
+    public void removeNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ECLAIR) {
+            stopForeground(true);
+        }
+        notificationManager.cancel(NOTIFICATION_ID);
+    }
 }
