@@ -283,6 +283,11 @@ public class MediaSessionService extends Service {
                     .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artwork)
                     .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration);
             mediaSession.setMetadata(mediaMetadataBuilder.build());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+              startForeground(NOTIFICATION_ID, notificationBuilder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+              startForeground(NOTIFICATION_ID, notificationBuilder.build());
+            }
             mediaMetadataUpdate = false;
         }
 
