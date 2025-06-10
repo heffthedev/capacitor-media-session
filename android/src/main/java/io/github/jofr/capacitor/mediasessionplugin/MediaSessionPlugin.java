@@ -214,12 +214,27 @@ public class MediaSessionPlugin extends Plugin {
     }
 
     public void actionCallback(String action, JSObject data) {
+        Log.d(TAG, "Action callback triggered: " + action);
         PluginCall call = actionHandlers.get(action);
         if (call != null && !call.getCallbackId().equals(PluginCall.CALLBACK_ID_DANGLING)) {
             data.put("action", action);
             call.resolve(data);
         } else {
-            Log.d(TAG, "No handler for action " + action);
+            Log.w(TAG, "No handler for action " + action);
+            
+            // For Bluetooth compatibility, if pause handler is missing but play exists,
+            // and this is a toggle action, try to handle it intelligently
+            if ("pause".equals(action) && data.has("toggle") && data.optBoolean("toggle", false)) {
+                PluginCall playCall = actionHandlers.get("play");
+                if (playCall != null && !playCall.getCallbackId().equals(PluginCall.CALLBACK_ID_DANGLING)) {
+                    Log.d(TAG, "Converting toggle pause to play action");
+                    JSObject playData = new JSObject();
+                    playData.put("action", "play");
+                    playData.put("originalAction", "pause");
+                    playData.put("toggle", true);
+                    playCall.resolve(playData);
+                }
+            }
         }
     }
 }

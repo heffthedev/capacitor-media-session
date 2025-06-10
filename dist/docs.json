@@ -17,7 +17,7 @@
         ],
         "returns": "Promise<void>",
         "tags": [],
-        "docs": "Sets metadata of the currently playing media. Analogue to setting the\n[metadata property of the MediaSession\ninterface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/metadata)\nwhen using the Media Session API directly.",
+        "docs": "Sets metadata of the currently playing media. Analogue to setting the\r\n[metadata property of the MediaSession\r\ninterface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/metadata)\r\nwhen using the Media Session API directly.",
         "complexTypes": [
           "MetadataOptions"
         ],
@@ -35,7 +35,7 @@
         ],
         "returns": "Promise<void>",
         "tags": [],
-        "docs": "Indicate whether media is playing or not. Analogue to setting the\n[playbackState property of the MediaSession\ninterface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/playbackState)\nwhen using the Media Session API directly.",
+        "docs": "Indicate whether media is playing or not. Analogue to setting the\r\n[playbackState property of the MediaSession\r\ninterface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/playbackState)\r\nwhen using the Media Session API directly.",
         "complexTypes": [
           "PlaybackStateOptions"
         ],
@@ -58,7 +58,7 @@
         ],
         "returns": "Promise<void>",
         "tags": [],
-        "docs": "Sets handler for media session actions (e.g. initiated via onscreen media\ncontrols or physical buttons). Analogue to calling [setActionHandler() of\nthe MediaSession\ninterface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/setActionHandler)\nwhen using the Media Session API directly.",
+        "docs": "Sets handler for media session actions (e.g. initiated via onscreen media\r\ncontrols or physical buttons). Analogue to calling [setActionHandler() of\r\nthe MediaSession\r\ninterface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/setActionHandler)\r\nwhen using the Media Session API directly.",
         "complexTypes": [
           "ActionHandlerOptions",
           "ActionHandler"
@@ -77,7 +77,7 @@
         ],
         "returns": "Promise<void>",
         "tags": [],
-        "docs": "Update current media playback position, duration and speed. Analogue to\ncalling [setPositionState() of the MediaSession\ninterface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/setPositionState)\nwhen using the Media Session API directly.",
+        "docs": "Update current media playback position, duration and speed. Analogue to\r\ncalling [setPositionState() of the MediaSession\r\ninterface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/setPositionState)\r\nwhen using the Media Session API directly.",
         "complexTypes": [
           "PositionStateOptions"
         ],

@@ -9,7 +9,7 @@
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback">
-            <intent-filter>
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </service>
@@ -17,7 +17,7 @@
         <receiver
             android:name="androidx.media.session.MediaButtonReceiver"
             android:exported="true" >
-            <intent-filter>
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>

@@ -38,8 +38,8 @@ public class MediaSessionService extends Service {
     private MediaStyle notificationStyle;
     private final Map<String, NotificationCompat.Action> notificationActions = new HashMap<>();
     private final Map<String, Long> playbackStateActions = new HashMap<>();
-    private final String[] possibleActions = {"previoustrack", "seekbackward", "play", "pause", "seekforward", "nexttrack", "seekto", "stop"};
-    final Set<String> possibleCompactViewActions = new HashSet<>(Arrays.asList("previoustrack", "play", "pause", "nexttrack", "stop"));
+    private final String[] possibleActions = {"previoustrack", "seekbackward", "play", "pause", "playpause", "seekforward", "nexttrack", "seekto", "stop"};
+    final Set<String> possibleCompactViewActions = new HashSet<>(Arrays.asList("previoustrack", "play", "pause", "playpause", "nexttrack", "stop"));
     private static final int NOTIFICATION_ID = 1;
 
     private int playbackState = PlaybackStateCompat.STATE_NONE;
@@ -84,10 +84,20 @@ public class MediaSessionService extends Service {
 
         mediaSession = new MediaSessionCompat(this, "WebViewMediaSession");
         mediaSession.setCallback(new MediaSessionCallback(plugin));
+        
+        // Set flags to handle media buttons and transport controls
+        mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+        
         mediaSession.setActive(true);
 
         playbackStateBuilder = new PlaybackStateCompat.Builder()
-                .setActions(PlaybackStateCompat.ACTION_PLAY)
+                .setActions(PlaybackStateCompat.ACTION_PLAY | 
+                          PlaybackStateCompat.ACTION_PAUSE |
+                          PlaybackStateCompat.ACTION_PLAY_PAUSE |
+                          PlaybackStateCompat.ACTION_STOP |
+                          PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+                          PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
                 .setState(PlaybackStateCompat.STATE_PAUSED, position, playbackSpeed);
         mediaSession.setPlaybackState(playbackStateBuilder.build());
 
@@ -118,7 +128,7 @@ public class MediaSessionService extends Service {
                 R.drawable.ic_baseline_play_arrow_24, "Play", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY)
         ));
         notificationActions.put("pause", new NotificationCompat.Action(
-                R.drawable.ic_baseline_pause_24, "Pause", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE)
+                R.drawable.ic_baseline_pause_24, "Pause", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE)
         ));
         notificationActions.put("seekbackward", new NotificationCompat.Action(
                 R.drawable.ic_baseline_replay_30_24, "Previous Track", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_REWIND)
@@ -135,15 +145,23 @@ public class MediaSessionService extends Service {
         notificationActions.put("stop", new NotificationCompat.Action(
                 R.drawable.ic_baseline_stop_24, "Stop", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP)
         ));
+        
+        // Add play/pause toggle action for Bluetooth compatibility
+        notificationActions.put("playpause", new NotificationCompat.Action(
+                R.drawable.ic_baseline_play_arrow_24, "Play/Pause", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE)
+        ));
 
         playbackStateActions.put("previoustrack", PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS);
         playbackStateActions.put("seekbackward", PlaybackStateCompat.ACTION_REWIND);
         playbackStateActions.put("play", PlaybackStateCompat.ACTION_PLAY);
-        playbackStateActions.put("pause", PlaybackStateCompat.ACTION_PLAY_PAUSE);
+        playbackStateActions.put("pause", PlaybackStateCompat.ACTION_PAUSE);
         playbackStateActions.put("seekforward", PlaybackStateCompat.ACTION_FAST_FORWARD);
         playbackStateActions.put("nexttrack", PlaybackStateCompat.ACTION_SKIP_TO_NEXT);
         playbackStateActions.put("seekto", PlaybackStateCompat.ACTION_SEEK_TO);
         playbackStateActions.put("stop", PlaybackStateCompat.ACTION_STOP);
+        
+        // Add PLAY_PAUSE action for Bluetooth compatibility
+        playbackStateActions.put("playpause", PlaybackStateCompat.ACTION_PLAY_PAUSE);
     }
 
     public void destroy() {
@@ -229,8 +247,19 @@ public class MediaSessionService extends Service {
 
             int notificationActionIndex = 0;
             int compactNotificationActionIndicesIndex = 0;
+            
+            // Always include PLAY_PAUSE action for Bluetooth compatibility
+            activePlaybackStateActions |= PlaybackStateCompat.ACTION_PLAY_PAUSE;
+            
             for (String actionName : possibleActions) {
-                if (plugin.hasActionHandler(actionName)) {
+                boolean hasHandler = plugin.hasActionHandler(actionName);
+                
+                // Special handling for playpause - include if either play or pause handlers exist
+                if (actionName.equals("playpause")) {
+                    hasHandler = plugin.hasActionHandler("play") || plugin.hasActionHandler("pause");
+                }
+                
+                if (hasHandler) {
                     if (actionName.equals("play") && playbackState != PlaybackStateCompat.STATE_PAUSED) {
                         continue;
                     }
@@ -270,6 +299,13 @@ public class MediaSessionService extends Service {
         }
 
         if (playbackStateUpdate && playbackStateBuilder != null) {
+            // Ensure PLAY_PAUSE is always available for Bluetooth compatibility
+            long currentActions = playbackStateBuilder.build().getActions();
+            if ((currentActions & PlaybackStateCompat.ACTION_PLAY_PAUSE) == 0) {
+                currentActions |= PlaybackStateCompat.ACTION_PLAY_PAUSE;
+                playbackStateBuilder.setActions(currentActions);
+            }
+            
             playbackStateBuilder.setState(this.playbackState, this.position, this.playbackSpeed);
             mediaSession.setPlaybackState(playbackStateBuilder.build());
             playbackStateUpdate = false;
