@@ -58,7 +58,7 @@
         ],
         "returns": "Promise<void>",
         "tags": [],
-        "docs": "Sets handler for media session actions (e.g. initiated via onscreen media\r\ncontrols or physical buttons). Analogue to calling [setActionHandler() of\r\nthe MediaSession\r\ninterface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/setActionHandler)\r\nwhen using the Media Session API directly.",
+        "docs": "Sets handler for media session actions (e.g. initiated via onscreen media\r\ncontrols or physical buttons). Analogue to calling [setActionHandler() of\r\nthe MediaSession\r\ninterface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/setActionHandler)\r\nwhen using the Media Session API directly.\r\n\r\nIMPORTANT: For correct Bluetooth behavior, your action handlers should call\r\nsetPlaybackState() after changing playback state. Example:\r\n\r\nMediaSession.setActionHandler({ action: 'pause' }, async () => {\r\n    audioElement.pause();\r\n    await MediaSession.setPlaybackState({ playbackState: 'paused' });\r\n});",
         "complexTypes": [
           "ActionHandlerOptions",
           "ActionHandler"

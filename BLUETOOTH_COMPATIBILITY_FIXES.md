@@ -47,7 +47,44 @@ mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
 
 **Fix**: Added high priority (1000) to MediaButtonReceiver intent filters in the manifest.
 
-### 6. Missing Bluetooth-Specific Handling
+### 6. Bluetooth Device Keycode Mismatch & Integration Pattern Issue (Android 12+ Bluetooth Issue)
+
+**Primary Issue - Integration Pattern**: 
+The most common cause of Bluetooth toggle issues is **missing `setPlaybackState()` calls** in application code. The plugin can only make intelligent toggle decisions if the app keeps it informed of the current playback state.
+
+**Secondary Issue - Keycode Handling**: 
+Some Bluetooth devices send different keycodes than expected:
+- Expected: `KEYCODE_MEDIA_PLAY_PAUSE` = 85  
+- Actual from some devices: `KEYCODE_MEDIA_PAUSE` = 127, `KEYCODE_MEDIA_PLAY` = 126
+
+**Root Cause Analysis**:
+1. **Integration Layer**: Apps often forget to call `MediaSession.setPlaybackState()` after handling actions
+2. **Plugin Layer**: Different Bluetooth devices send varying keycodes that need intelligent handling
+
+**Complete Fix**:
+
+**A) Application Integration (CRITICAL)**:
+```javascript
+MediaSession.setActionHandler({ action: 'pause' }, async () => {
+    audioElement.pause();
+    // 🚨 CRITICAL: Update plugin state
+    await MediaSession.setPlaybackState({ playbackState: 'paused' });
+});
+
+MediaSession.setActionHandler({ action: 'play' }, async () => {
+    audioElement.play();
+    // 🚨 CRITICAL: Update plugin state  
+    await MediaSession.setPlaybackState({ playbackState: 'playing' });
+});
+```
+
+**B) Plugin Enhancement**: 
+- **All 3 play/pause keycodes now use intelligent toggle logic**: 126, 127, and 85
+- This eliminates inconsistency when Bluetooth devices alternate between different keycodes
+- Added `getPlaybackState()` method for state-aware decisions
+- Comprehensive logging for debugging
+
+### 7. Missing Bluetooth-Specific Handling  
 **Issue**: No special handling for Bluetooth devices that send `KEYCODE_MEDIA_PLAY_PAUSE` instead of separate play/pause events.
 
 **Fix**: Added intelligent toggle handling:
@@ -70,10 +107,27 @@ public boolean onMediaButtonEvent(Intent mediaButtonEvent) {
 }
 
 private void handlePlayPauseToggle() {
-    // Intelligent handling that works with both play and pause handlers
-    JSObject data = new JSObject();
-    data.put("toggle", true);
-    plugin.actionCallback("pause", data);
+    // Get current playback state from plugin to determine correct action
+    String currentState = plugin.getPlaybackState();
+    Log.d(TAG, "Current playback state: " + currentState);
+    
+    if ("playing".equals(currentState)) {
+        // Currently playing, so trigger pause
+        if (plugin.hasActionHandler("pause")) {
+            Log.d(TAG, "Toggle: triggering pause (was playing)");
+            plugin.actionCallback("pause");
+        }
+    } else {
+        // Currently paused/stopped/none, so trigger play
+        if (plugin.hasActionHandler("play")) {
+            Log.d(TAG, "Toggle: triggering play (was not playing)");
+            plugin.actionCallback("play");
+        } else if (plugin.hasActionHandler("pause")) {
+            // Fallback for compatibility
+            Log.d(TAG, "Toggle: fallback to pause (no play handler)");
+            plugin.actionCallback("pause");
+        }
+    }
 }
 ```
 
@@ -108,11 +162,13 @@ private void handlePlayPauseToggle() {
 
 ## Testing Recommendations
 
-1. **Test with various Bluetooth devices**: Different manufacturers may send different key codes
-2. **Test app state transitions**: Ensure pause works when app is foreground, background, and inactive
-3. **Test on different Android versions**: Verify compatibility across API 23-35
-4. **Test rapid button presses**: Ensure no duplicate or missed events
-5. **Test with other media apps**: Ensure proper media session priority handling
+1. **Verify Integration Pattern**: Ensure your app calls `MediaSession.setPlaybackState()` after each action handler
+2. **Test with various Bluetooth devices**: Different manufacturers may send different key codes
+3. **Test app state transitions**: Ensure pause works when app is foreground, background, and inactive
+4. **Test on different Android versions**: Verify compatibility across API 23-35
+5. **Test rapid button presses**: Ensure no duplicate or missed events
+6. **Test with other media apps**: Ensure proper media session priority handling
+7. **Monitor plugin state**: Check logs for "REMINDER" messages about missing `setPlaybackState()` calls
 
 ## Debugging Features
 

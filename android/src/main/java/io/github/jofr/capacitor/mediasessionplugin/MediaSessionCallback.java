@@ -42,10 +42,14 @@ public class MediaSessionCallback extends MediaSessionCompat.Callback {
 
         switch (keyEvent.getKeyCode()) {
             case KeyEvent.KEYCODE_MEDIA_PLAY:
-                plugin.actionCallback("play");
+                // Some Bluetooth devices send KEYCODE_MEDIA_PLAY (126) and KEYCODE_MEDIA_PAUSE (127) 
+                // alternately instead of KEYCODE_MEDIA_PLAY_PAUSE (85). Handle as toggle for consistency.
+                handlePlayPauseToggle();
                 return true;
             case KeyEvent.KEYCODE_MEDIA_PAUSE:
-                plugin.actionCallback("pause");
+                // Some Bluetooth devices send KEYCODE_MEDIA_PAUSE (127) instead of KEYCODE_MEDIA_PLAY_PAUSE (85)
+                // Handle as toggle for consistency with KEYCODE_MEDIA_PLAY behavior
+                handlePlayPauseToggle();
                 return true;
             case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
                 // Handle play/pause toggle button (common on Bluetooth headsets)
@@ -76,20 +80,32 @@ public class MediaSessionCallback extends MediaSessionCompat.Callback {
     private void handlePlayPauseToggle() {
         // For Bluetooth headsets that send KEYCODE_MEDIA_PLAY_PAUSE,
         // we need to determine whether to play or pause based on current state
-        // Since we don't have direct access to playback state here, we'll trigger
-        // both actions and let the plugin handle the logic
+        // 
+        // IMPORTANT: This method depends on the app calling MediaSession.setPlaybackState()
+        // after handling each action. If the app doesn't update the state, this toggle
+        // logic will make incorrect decisions.
         Log.d(TAG, "Handling play/pause toggle");
         
-        // Check if we have both play and pause handlers
-        if (plugin.hasActionHandler("play") && plugin.hasActionHandler("pause")) {
-            // Send a special toggle action that the plugin can handle
-            JSObject data = new JSObject();
-            data.put("toggle", true);
-            plugin.actionCallback("pause", data); // Default to pause for Bluetooth compatibility
-        } else if (plugin.hasActionHandler("play")) {
-            plugin.actionCallback("play");
-        } else if (plugin.hasActionHandler("pause")) {
-            plugin.actionCallback("pause");
+        // Get current playback state from plugin to determine correct action
+        String currentState = plugin.getPlaybackState();
+        Log.d(TAG, "Current playback state: " + currentState);
+        
+        if ("playing".equals(currentState)) {
+            // Currently playing, so trigger pause
+            if (plugin.hasActionHandler("pause")) {
+                Log.d(TAG, "Toggle: triggering pause (was playing)");
+                plugin.actionCallback("pause");
+            }
+        } else {
+            // Currently paused/stopped/none, so trigger play
+            if (plugin.hasActionHandler("play")) {
+                Log.d(TAG, "Toggle: triggering play (was not playing)");
+                plugin.actionCallback("play");
+            } else if (plugin.hasActionHandler("pause")) {
+                // Fallback for compatibility
+                Log.d(TAG, "Toggle: fallback to pause (no play handler)");
+                plugin.actionCallback("pause");
+            }
         }
     }
 

@@ -209,6 +209,10 @@ public class MediaSessionPlugin extends Plugin {
         return actionHandlers.containsKey(action) && !actionHandlers.get(action).getCallbackId().equals(PluginCall.CALLBACK_ID_DANGLING);
     }
 
+    public String getPlaybackState() {
+        return playbackState;
+    }
+
     public void actionCallback(String action) {
         actionCallback(action, new JSObject());
     }
@@ -219,22 +223,13 @@ public class MediaSessionPlugin extends Plugin {
         if (call != null && !call.getCallbackId().equals(PluginCall.CALLBACK_ID_DANGLING)) {
             data.put("action", action);
             call.resolve(data);
+            
+            // Log reminder for developers about updating playback state
+            if ("play".equals(action) || "pause".equals(action)) {
+                Log.i(TAG, "REMINDER: Your app should call MediaSession.setPlaybackState() after handling '" + action + "' action for correct Bluetooth behavior");
+            }
         } else {
             Log.w(TAG, "No handler for action " + action);
-            
-            // For Bluetooth compatibility, if pause handler is missing but play exists,
-            // and this is a toggle action, try to handle it intelligently
-            if ("pause".equals(action) && data.has("toggle") && data.optBoolean("toggle", false)) {
-                PluginCall playCall = actionHandlers.get("play");
-                if (playCall != null && !playCall.getCallbackId().equals(PluginCall.CALLBACK_ID_DANGLING)) {
-                    Log.d(TAG, "Converting toggle pause to play action");
-                    JSObject playData = new JSObject();
-                    playData.put("action", "play");
-                    playData.put("originalAction", "pause");
-                    playData.put("toggle", true);
-                    playCall.resolve(playData);
-                }
-            }
         }
     }
 }

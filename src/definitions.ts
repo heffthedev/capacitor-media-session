@@ -47,6 +47,14 @@ export interface MediaSessionPlugin {
      * the MediaSession
      * interface](https://developer.mozilla.org/en-US/docs/Web/API/MediaSession/setActionHandler)
      * when using the Media Session API directly.
+     * 
+     * IMPORTANT: For correct Bluetooth behavior, your action handlers should call
+     * setPlaybackState() after changing playback state. Example:
+     * 
+     * MediaSession.setActionHandler({ action: 'pause' }, async () => {
+     *     audioElement.pause();
+     *     await MediaSession.setPlaybackState({ playbackState: 'paused' });
+     * });
      */
     setActionHandler(options: ActionHandlerOptions, handler: ActionHandler | null): Promise<void>;
     /**
