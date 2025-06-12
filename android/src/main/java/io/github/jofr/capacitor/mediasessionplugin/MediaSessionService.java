@@ -251,6 +251,12 @@ public class MediaSessionService extends Service {
             // Always include PLAY_PAUSE action for Bluetooth compatibility
             activePlaybackStateActions |= PlaybackStateCompat.ACTION_PLAY_PAUSE;
             
+            // Check if plugin is initialized before proceeding
+            if (plugin == null) {
+                possibleActionsUpdate = false;
+                return;
+            }
+            
             for (String actionName : possibleActions) {
                 boolean hasHandler = plugin.hasActionHandler(actionName);
                 
@@ -271,7 +277,7 @@ public class MediaSessionService extends Service {
                         activePlaybackStateActions = activePlaybackStateActions | playbackStateActions.get(actionName);
                     }
 
-                    if (notificationActions.containsKey(actionName)) {
+                    if (notificationActions.containsKey(actionName) && notificationBuilder != null) {
                         notificationBuilder.addAction(notificationActions.get(actionName));
                         if (possibleCompactViewActions.contains(actionName) && compactNotificationActionIndicesIndex < 3) {
                             activeCompactViewActionIndices[compactNotificationActionIndicesIndex] = notificationActionIndex;
@@ -298,7 +304,7 @@ public class MediaSessionService extends Service {
             notificationUpdate = true;
         }
 
-        if (playbackStateUpdate && playbackStateBuilder != null) {
+        if (playbackStateUpdate && playbackStateBuilder != null && mediaSession != null) {
             // Ensure PLAY_PAUSE is always available for Bluetooth compatibility
             long currentActions = playbackStateBuilder.build().getActions();
             if ((currentActions & PlaybackStateCompat.ACTION_PLAY_PAUSE) == 0) {
@@ -311,7 +317,7 @@ public class MediaSessionService extends Service {
             playbackStateUpdate = false;
         }
 
-        if (mediaMetadataUpdate && mediaMetadataBuilder != null) {
+        if (mediaMetadataUpdate && mediaMetadataBuilder != null && mediaSession != null) {
             mediaMetadataBuilder
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
                     .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
@@ -319,15 +325,17 @@ public class MediaSessionService extends Service {
                     .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artwork)
                     .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration);
             mediaSession.setMetadata(mediaMetadataBuilder.build());
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-              startForeground(NOTIFICATION_ID, notificationBuilder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-            } else {
-              startForeground(NOTIFICATION_ID, notificationBuilder.build());
+            if (notificationBuilder != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                  startForeground(NOTIFICATION_ID, notificationBuilder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+                } else {
+                  startForeground(NOTIFICATION_ID, notificationBuilder.build());
+                }
             }
             mediaMetadataUpdate = false;
         }
 
-        if (notificationUpdate && notificationBuilder != null) {
+        if (notificationUpdate && notificationBuilder != null && notificationManager != null) {
             notificationBuilder
                     .setContentTitle(title)
                     .setContentText(artist + " - " + album)
