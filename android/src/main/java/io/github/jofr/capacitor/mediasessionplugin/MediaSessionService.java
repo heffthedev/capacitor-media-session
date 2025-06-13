@@ -58,6 +58,7 @@ public class MediaSessionService extends Service {
 
     private MediaSessionPlugin plugin;
     private MediaSessionCallback callback;
+    private Intent originalIntent;
 
     private final IBinder binder = new LocalBinder();
 
@@ -81,6 +82,7 @@ public class MediaSessionService extends Service {
 
     public void connectAndInitialize(MediaSessionPlugin plugin, Intent intent) {
         this.plugin = plugin;
+        this.originalIntent = intent;
 
         mediaSession = new MediaSessionCompat(this, "WebViewMediaSession");
         mediaSession.setCallback(new MediaSessionCallback(plugin));
@@ -235,11 +237,12 @@ public class MediaSessionService extends Service {
         }
     }
 
-    @SuppressLint("RestrictedApi")
     public void update() {
         if (possibleActionsUpdate) {
+          // Recreate notification builder to avoid ConcurrentModificationException
+          // This is safer than directly manipulating the private mActions field
           if (notificationBuilder != null) {
-            notificationBuilder.mActions.clear();
+            recreateNotificationBuilder();
           }
 
             long activePlaybackStateActions = 0;
@@ -349,6 +352,18 @@ public class MediaSessionService extends Service {
             notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
             notificationUpdate = false;
         }
+    }
+
+    private void recreateNotificationBuilder() {
+        // Create fresh notification builder using the stored original intent
+        Intent intentToUse = originalIntent != null ? originalIntent : new Intent();
+        PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intentToUse, PendingIntent.FLAG_IMMUTABLE);
+        
+        notificationBuilder = new NotificationCompat.Builder(this, "playback")
+                .setStyle(notificationStyle)
+                .setSmallIcon(R.drawable.ic_baseline_volume_up_24)
+                .setContentIntent(pendingIntent)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
     }
 
     public void updatePossibleActions() {
