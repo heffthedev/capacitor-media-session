@@ -266,11 +266,17 @@ public class MediaSessionService extends Service {
                 }
                 
                 if (hasHandler) {
+                    // For notification UI: only show one play/pause button, never both
                     if (actionName.equals("play") && playbackState != PlaybackStateCompat.STATE_PAUSED) {
                         continue;
                     }
                     if (actionName.equals("pause") && playbackState != PlaybackStateCompat.STATE_PLAYING) {
                         continue;
+                    }
+                    // Skip playpause in notifications when individual play/pause handlers exist
+                    if (actionName.equals("playpause") && 
+                        (plugin.hasActionHandler("play") || plugin.hasActionHandler("pause"))) {
+                        continue; // Don't add to notification
                     }
 
                     if (playbackStateActions.containsKey(actionName)) {
