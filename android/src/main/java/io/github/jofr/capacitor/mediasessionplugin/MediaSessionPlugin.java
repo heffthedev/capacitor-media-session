@@ -11,8 +11,6 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Base64;
 import android.util.Log;
 
-import androidx.core.content.ContextCompat;
-
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -83,7 +81,11 @@ public class MediaSessionPlugin extends Plugin {
 
     public void startMediaService() {
         Intent intent = new Intent(getActivity(), MediaSessionService.class);
-        ContextCompat.startForegroundService(getContext(), intent);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            getContext().startForegroundService(intent);
+        } else {
+            getContext().startService(intent);
+        }
         getContext().bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
     }
 
@@ -161,7 +163,10 @@ public class MediaSessionPlugin extends Plugin {
         try {
             if(playbackState.equals("none"))
             {
-                service.removeNotification();
+                if (service != null) {
+                    service.removeNotification();
+                }
+                call.resolve();
                 return;
             }
             if (startServiceOnlyDuringPlayback && service == null && playback) {

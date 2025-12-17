@@ -11,12 +11,12 @@ import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Binder;
+import android.os.SystemClock;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.media.session.MediaButtonReceiver;
 import androidx.media.app.NotificationCompat.MediaStyle;
@@ -100,7 +100,8 @@ public class MediaSessionService extends Service {
                           PlaybackStateCompat.ACTION_STOP |
                           PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
                           PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
-                .setState(PlaybackStateCompat.STATE_PAUSED, position, playbackSpeed);
+                // .setState(PlaybackStateCompat.STATE_PAUSED, position, playbackSpeed);
+                .setState(PlaybackStateCompat.STATE_PAUSED, position, playbackSpeed, SystemClock.elapsedRealtime());
         mediaSession.setPlaybackState(playbackStateBuilder.build());
 
         mediaMetadataBuilder = new MediaMetadataCompat.Builder()
@@ -224,8 +225,17 @@ public class MediaSessionService extends Service {
     }
 
     public void setPosition(long position) {
-        if (this.position != position) {
-            this.position = position;
+        boolean positionChanged = this.position != position;
+        this.position = position;
+        
+        // If position changed while paused, force notification update to refresh lockscreen
+        // The lockscreen reads position from the MediaSession's PlaybackState, but only refreshes
+        // when the notification is updated via startForeground()
+        if (positionChanged && this.playbackState == PlaybackStateCompat.STATE_PAUSED) {
+            this.notificationUpdate = true;
+        }
+        
+        if (positionChanged) {
             playbackStateUpdate = true;
         }
     }
@@ -321,7 +331,7 @@ public class MediaSessionService extends Service {
                 playbackStateBuilder.setActions(currentActions);
             }
             
-            playbackStateBuilder.setState(this.playbackState, this.position, this.playbackSpeed);
+            playbackStateBuilder.setState(this.playbackState, this.position, this.playbackSpeed, SystemClock.elapsedRealtime());
             mediaSession.setPlaybackState(playbackStateBuilder.build());
             playbackStateUpdate = false;
         }
@@ -349,7 +359,12 @@ public class MediaSessionService extends Service {
                     .setContentTitle(title)
                     .setContentText(artist + " - " + album)
                     .setLargeIcon(artwork);
-            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+            // Use startForeground instead of notify to force lockscreen to refresh position
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notificationBuilder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+                startForeground(NOTIFICATION_ID, notificationBuilder.build());
+            }
             notificationUpdate = false;
         }
     }
